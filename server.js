@@ -1,22 +1,9 @@
-import express from "express"
-import cors from "cors"
+import { WebSocketServer } from "ws";
+const server = new WebSocketServer({ port : "5000" })
 
-const PORT = 5000
-
-const app = express()
-
-const users = ["Rahul","Messi","Federer"]
-
-app.use(cors())
-
-app.get("/users", (req,res) => {
-    res.json({users : users})
-})
-
-app.post("/users", (req,res) => {
-    console.log(req.body)
-})
-
-app.listen(PORT,() => {
-    console.log(`Server is running on ${PORT}`)
+server.on("connection", socket => {
+    console.log("user connnected");
+    socket.on("message", message => {
+        socket.emit(message.toString())
+    })
 })
