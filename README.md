@@ -2,6 +2,7 @@
 
 The backend for the chatapp, written in NodeJS,Express and WebSockets.
 
+- [ ] Database Setup
 - [ ] Account Functionality
 - [ ] Servers, DMs, Group DMs
 - [ ] API routes
