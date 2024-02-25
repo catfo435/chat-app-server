@@ -30,14 +30,15 @@ const io = new Server(httpServer,{
 
 io.use((socket, next) => {
     const username = socket.handshake.auth.username;
-    socket.username = username;
+    socket.id = username;
     next();
   });
 
 io.on("connection", socket => {
     console.log(`User ${socket.handshake.auth.username} connnected`);
 
-    socket.on("message", ({ message,sender,receiver}) => {
+    socket.on("message", async ({ message,sender,receiver}) => {
+        await db.query(`INSERT INTO transaction01(message,sender,receiver) VALUES($1,$2,$3)`,[message,sender,receiver])
         socket.to(receiver).emit("message", {
           message,
           sender,
@@ -48,7 +49,6 @@ io.on("connection", socket => {
 })
 
 
-// const result = await db.query(`INSERT INTO transaction01(message,sender,receiver) VALUES($1,$2,$3)`,[message.message,message.sender,message.receiver])
 
 app.get("/getmessages", async (req,res) => {
     try {
