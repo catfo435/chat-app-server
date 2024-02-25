@@ -1,4 +1,5 @@
-import { WebSocketServer } from "ws";
+import { Server } from "socket.io";
+import { createServer } from "http";
 import express from "express";
 import cors from "cors"
 import pg from 'pg'
@@ -12,18 +13,6 @@ const db = new pg.Pool({
     database: 'chatapp'
 });
 
-
-const server = new WebSocketServer({ port : "5000" })
-
-server.on("connection", socket => {
-    console.log("user connnected");
-    socket.on("message", message => {
-        server.clients.forEach((client) => {
-            client.send(message.toString())
-        })
-    })
-})
-
 const app = express()
 
 const corsOptions = {
@@ -33,6 +22,33 @@ const corsOptions = {
 
 app.use(cors(corsOptions))
 app.use(bodyParser.json())
+
+const httpServer = createServer(app);
+const io = new Server(httpServer,{
+    cors : corsOptions
+});
+
+io.use((socket, next) => {
+    const username = socket.handshake.auth.username;
+    socket.username = username;
+    next();
+  });
+
+io.on("connection", socket => {
+    console.log(`User ${socket.handshake.auth.username} connnected`);
+
+    socket.on("message", ({ message,sender,receiver}) => {
+        socket.to(receiver).emit("message", {
+          message,
+          sender,
+          receiver
+        });
+      });
+
+})
+
+
+// const result = await db.query(`INSERT INTO transaction01(message,sender,receiver) VALUES($1,$2,$3)`,[message.message,message.sender,message.receiver])
 
 app.get("/getmessages", async (req,res) => {
     try {
@@ -74,6 +90,6 @@ app.post("/newuser", async (req,res) => {
     }
 })
 
-app.listen(4000,() => {
+httpServer.listen(4000,() => {
     console.log('Server listening on port 4000')
 })
