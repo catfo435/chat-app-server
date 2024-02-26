@@ -50,7 +50,7 @@ io.on("connection", socket => {
 
 
 
-app.get("/getmessages", async (req,res) => {
+app.get("/messages", async (req,res) => {
     try {
         const result = await db.query(`SELECT * FROM transaction01`)
         res.status(200).send({messages:result.rows})
@@ -61,7 +61,7 @@ app.get("/getmessages", async (req,res) => {
     }
 })
 
-app.post("/authenticate", async (req,res) => {
+app.post("/users/login", async (req,res) => {
 
     try {
         const result = await db.query(`SELECT * FROM users WHERE username = $1::text`,[req.body.username])
@@ -74,7 +74,7 @@ app.post("/authenticate", async (req,res) => {
     }
 })
 
-app.post("/newuser", async (req,res) => {
+app.post("/users", async (req,res) => {
 
     res.status(501).send("Not Implemented Yet")
     return; // until user addition "+" is implemented
