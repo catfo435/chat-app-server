@@ -18,6 +18,18 @@ const db = new pg.Pool({
 
 const app = express()
 
+function authorizeToken(req,res,next) {
+    const authHeader = req.headers['authorization']
+    const token = authHeader && authHeader.split(" ")[1]
+    if (!token) return res.status(401).send("Token Not Found")
+
+    jwt.verify(token,process.env.SECRET_SALT, (err, user) => {
+        if (err) return res.status(403).send()
+        req.user = user
+        next()
+    })
+}
+
 const corsOptions = {
     origin : "http://localhost:3000",
     optionsSuccessStatus: 200
@@ -32,14 +44,31 @@ const io = new Server(httpServer,{
 });
 
 io.use((socket, next) => {
-    const username = socket.handshake.auth.username;
-    socket.user = username;
-    next();
-  });
+
+    const header = socket.handshake.auth.token;
+  
+    if (!header) {
+      return next(new Error("No token"))
+    }
+  
+    if (!header.startsWith("Bearer ")) {
+      return next(new Error("Invalid token"));
+    }
+  
+    const token = header.split(" ")[1]
+  
+    jwt.verify(token, process.env.SECRET_SALT, (err, decoded) => {
+      if (err) {
+        return next(new Error("Invalid token"))
+      }
+      socket.user = decoded.username
+      next()
+    })
+  })
 
 io.on("connection", socket => {
-    console.log(`User ${socket.handshake.auth.username} connnected`);
-    socket.join(socket.user);
+    console.log(`User ${socket.user} connnected`)
+    socket.join(socket.user)
 
     socket.on("message", async ({ message,sender,receiver}) => {
         await db.query(`INSERT INTO transaction01(message,sender,receiver) VALUES($1,$2,$3)`,[message,sender,receiver])
@@ -47,21 +76,19 @@ io.on("connection", socket => {
           message,
           sender,
           receiver
-        });
-      });
-
+        })
+      })
 })
 
 
-
-app.get("/messages", async (req,res) => {
+app.get("/messages", authorizeToken , async (req,res) => {
     try {
         const result = await db.query(`SELECT * FROM transaction01`)
         res.status(200).send({messages:result.rows})
       } 
     catch (err) {
         console.error(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send();
     }
 })
 
@@ -80,7 +107,7 @@ app.post("/users/login", async (req,res) => {
       } 
     catch (err) {
         console.error(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send();
     }
 })
 
@@ -98,7 +125,7 @@ app.post("/users", async (req,res) => {
         catch (err) {
             console.error(err);
             if (err.code == '23505') res.status(403).send('Username already exists')
-            else res.status(500).send('Internal Server Error');
+            else res.status(500).send();
         }
     })
 })
