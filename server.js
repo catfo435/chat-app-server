@@ -130,6 +130,18 @@ app.post("/users", async (req,res) => {
     })
 })
 
+app.get("/users/:username", async (req,res) => {
+  try {
+    const result = await db.query(`SELECT * FROM users WHERE username = $1::text`,[req.params.username])
+    if (result.rows[0]) res.status(200).send()
+    else res.status(404).send("User not found!")
+  } 
+  catch (err) {
+    console.error(err);
+    res.status(500).send();
+}
+})
+
 httpServer.listen(4000,() => {
     console.log('Server listening on port 4000')
 })
